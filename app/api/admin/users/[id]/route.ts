@@ -39,20 +39,12 @@ export async function PATCH(
       )
     }
 
-    if (action === 'SUSPEND') {
-      const updated = await prisma.user.update({
-        where: { id },
-        data: { status: 'SUSPENDED' },
-      })
-      return NextResponse.json({ message: 'User suspended', user: updated })
-    }
-
-    if (action === 'BAN') {
+    if (action === 'DEACTIVATE') {
       const updated = await prisma.user.update({
         where: { id },
         data: { status: 'BANNED' },
       })
-      return NextResponse.json({ message: 'User banned', user: updated })
+      return NextResponse.json({ message: 'User deactivated', user: updated })
     }
 
     if (action === 'ACTIVATE') {

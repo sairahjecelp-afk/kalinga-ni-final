@@ -27,8 +27,8 @@ type User = {
 
 const STATUS_STYLES: Record<UserStatus, string> = {
   ACTIVE:    'bg-green-100 text-green-700',
-  SUSPENDED: 'bg-yellow-100 text-yellow-700',
-  BANNED:    'bg-red-100 text-red-700',
+  SUSPENDED: 'hidden', // No longer used, but kept in Record for type safety
+  BANNED:    'bg-red-100 text-red-700', // Displayed as "Deactivated"
   DELETED:   'bg-gray-100 text-gray-400 line-through',
 }
 
@@ -47,7 +47,7 @@ export default function UsersPage() {
   const [filterSpecialization, setFilterSpecialization] = useState('ALL')
 
   const [modal, setModal] = useState<{
-    type: 'suspend' | 'ban' | 'delete' | 'activate' | 'reset' | null
+    type: 'deactivate' | 'delete' | 'activate' | 'reset' | null
     user: User | null
   }>({ type: null, user: null })
   const [newPassword, setNewPassword] = useState('')
@@ -68,7 +68,7 @@ export default function UsersPage() {
     setActionLoading(true)
     try {
       const actionMap = {
-        suspend: 'SUSPEND', ban: 'BAN', delete: 'DELETE',
+        deactivate: 'DEACTIVATE', delete: 'DELETE',
         activate: 'ACTIVATE', reset: 'RESET_PASSWORD',
       }
       const res = await fetch(`/api/admin/users/${modal.user.id}`, {
@@ -168,8 +168,7 @@ export default function UsersPage() {
         >
           <option value="ALL">All Statuses</option>
           <option value="ACTIVE">Active</option>
-          <option value="SUSPENDED">Suspended</option>
-          <option value="BANNED">Banned</option>
+          <option value="BANNED">Deactivated</option>
           <option value="DELETED">Deleted</option>
         </select>
 
@@ -237,7 +236,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-5 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[user.status] ?? ''}`}>
-                        {user.status}
+                        {user.status === 'BANNED' ? 'DEACTIVATED' : user.status}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-gray-400">
@@ -249,22 +248,13 @@ export default function UsersPage() {
                       {user.role !== 'ADMIN' && (
                         <div className="flex items-center gap-2 flex-wrap">
                           {user.status === 'ACTIVE' && (
-                            <>
-                              <button
-                                onClick={() => openModal('suspend', user)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 transition"
-                              >
-                                <ShieldOff className="h-3.5 w-3.5" />
-                                Suspend
-                              </button>
-                              <button
-                                onClick={() => openModal('ban', user)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition"
-                              >
-                                <ShieldBan className="h-3.5 w-3.5" />
-                                Ban
-                              </button>
-                            </>
+                            <button
+                              onClick={() => openModal('deactivate', user)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition"
+                            >
+                              <ShieldBan className="h-3.5 w-3.5" />
+                              Deactivate
+                            </button>
                           )}
                           {(user.status === 'SUSPENDED' || user.status === 'BANNED') && (
                             <button
@@ -299,25 +289,14 @@ export default function UsersPage() {
       {modal.type && modal.user && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            {modal.type === 'suspend' && (
-              <>
-                <div className="h-12 w-12 rounded-xl bg-yellow-100 flex items-center justify-center mx-auto mb-4">
-                  <ShieldOff className="h-6 w-6 text-yellow-600" />
-                </div>
-                <h2 className="text-lg font-bold text-gray-800 text-center mb-1">Suspend User</h2>
-                <p className="text-sm text-gray-500 text-center mb-6">
-                  <strong>{modal.user.firstName} {modal.user.lastName}</strong> will not be able to log in until reactivated.
-                </p>
-              </>
-            )}
-            {modal.type === 'ban' && (
+            {modal.type === 'deactivate' && (
               <>
                 <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
                   <ShieldBan className="h-6 w-6 text-red-500" />
                 </div>
-                <h2 className="text-lg font-bold text-gray-800 text-center mb-1">Ban User</h2>
+                <h2 className="text-lg font-bold text-gray-800 text-center mb-1">Deactivate User</h2>
                 <p className="text-sm text-gray-500 text-center mb-6">
-                  <strong>{modal.user.firstName} {modal.user.lastName}</strong> will be permanently banned from logging in.
+                  <strong>{modal.user.firstName} {modal.user.lastName}</strong> will not be able to log in until reactivated.
                 </p>
               </>
             )}
@@ -373,8 +352,7 @@ export default function UsersPage() {
               </Button>
               <Button
                 className={`flex-1 rounded-xl text-white ${
-                  modal.type === 'ban'      ? 'bg-red-500 hover:bg-red-600' :
-                  modal.type === 'suspend'  ? 'bg-yellow-500 hover:bg-yellow-600' :
+                  modal.type === 'deactivate' ? 'bg-red-500 hover:bg-red-600' :
                   modal.type === 'delete'   ? 'bg-gray-500 hover:bg-gray-600' :
                   modal.type === 'activate' ? 'bg-[#2d7a2d] hover:bg-[#245f24]' :
                   'bg-blue-500 hover:bg-blue-600'

@@ -239,11 +239,17 @@ export default async function AppointmentsPage({
 
                         {session.user.role === 'STAFF' && apt.patient ? (
                           <p className="text-gray-500 text-sm">
-                            Patient: <span className="font-medium text-gray-700">{apt.patient.user.firstName} {apt.patient.user.lastName}</span>
+                            Patient: <span className="font-medium text-gray-700">
+                              {apt.patient.user.firstName} {apt.patient.user.lastName}
+                              {apt.patient.user.status === 'DELETED' && <span className="text-red-500 ml-1">(Deactivated Account)</span>}
+                            </span>
                           </p>
                         ) : session.user.role !== 'STAFF' && apt.staff ? (
                           <p className="text-gray-500 text-sm">
-                            Doctor: <span className="font-medium text-gray-700">Dr. {apt.staff.user.firstName} {apt.staff.user.lastName}</span>
+                            Doctor: <span className="font-medium text-gray-700">
+                              Dr. {apt.staff.user.firstName} {apt.staff.user.lastName}
+                              {apt.staff.user.status === 'DELETED' && <span className="text-red-500 ml-1">(Deactivated Account)</span>}
+                            </span>
                           </p>
                         ) : null}
 

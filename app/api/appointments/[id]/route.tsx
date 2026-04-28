@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { sendAppointmentCancelledEmail } from '@/lib/notifications'
 
 export async function PATCH(
   request: NextRequest,
@@ -75,6 +76,71 @@ export async function PATCH(
         },
       },
     })
+
+    // If the status was changed to CANCELLED, send notifications
+    if (status === 'CANCELLED' && appointment.status !== 'CANCELLED') {
+      const patientUser = updatedAppointment.patient.user;
+      const staffUser = updatedAppointment.staff.user;
+      const staffName = `Dr. ${staffUser.firstName} ${staffUser.lastName}`;
+      const patientName = `${patientUser.firstName} ${patientUser.lastName}`;
+
+      // In-app notification
+      try {
+        await prisma.notificationLog.create({
+          data: {
+            userId: patientUser.id,
+            channel: 'APP',
+            subject: 'Appointment Cancelled',
+            body: `Your appointment with ${staffName} on ${updatedAppointment.appointmentDate.toLocaleDateString(
+              'en-PH',
+              { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' }
+            )} at ${updatedAppointment.appointmentDate.toLocaleTimeString('en-PH', {
+              timeZone: 'Asia/Manila',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })} has been cancelled.`,
+            status: 'SENT',
+            sentAt: new Date(),
+          },
+        })
+      } catch (notifErr) {
+        console.error('Failed to create in-app cancellation notification:', notifErr)
+      }
+
+      // Email notification
+      try {
+        await sendAppointmentCancelledEmail({
+          toEmail: patientUser.email,
+          patientName,
+          staffName,
+          appointmentDate: updatedAppointment.appointmentDate,
+          reason: updatedAppointment.reason,
+        })
+
+        await prisma.notificationLog.create({
+          data: {
+            userId: patientUser.id,
+            channel: 'EMAIL',
+            subject: 'Appointment Cancelled',
+            body: `Appointment on ${updatedAppointment.appointmentDate.toISOString()} with ${staffName} cancelled.`,
+            status: 'SENT',
+            sentAt: new Date(),
+          },
+        })
+      } catch (emailErr) {
+        console.error('Failed to send cancellation email:', emailErr)
+        await prisma.notificationLog.create({
+          data: {
+            userId: patientUser.id,
+            channel: 'EMAIL',
+            subject: 'Appointment Cancelled',
+            body: `Appointment on ${updatedAppointment.appointmentDate.toISOString()} with ${staffName} cancelled.`,
+            status: 'FAILED',
+          },
+        })
+      }
+    }
 
     return NextResponse.json(updatedAppointment)
   } catch (error) {

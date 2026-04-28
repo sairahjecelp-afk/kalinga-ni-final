@@ -238,6 +238,61 @@ function buildSlotCancelledEmail(
   };
 }
 
+function buildAppointmentCancelledEmail(
+  patientName: string,
+  staffName: string,
+  appointmentDate: Date,
+  reason: string
+) {
+  const date = formatDate(appointmentDate);
+  const time = formatTime(appointmentDate);
+
+  return {
+    subject: `Your appointment on ${date} has been cancelled`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+        <div style="background: #b91c1c; padding: 24px 32px; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">${CLINIC_NAME}</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
+          <p style="font-size: 16px; margin-top: 0;">Hi <strong>${patientName}</strong>,</p>
+          <p style="font-size: 15px; color: #374151;">
+            We're sorry to inform you that your upcoming appointment with ${staffName} has been
+            <strong style="color: #b91c1c;">cancelled</strong>.
+          </p>
+
+          <div style="background: white; border: 1px solid #fecaca; border-left: 4px solid #b91c1c; border-radius: 6px; padding: 20px; margin: 24px 0;">
+            <p style="margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280;">Cancelled Appointment</p>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 0; color: #6b7280; font-size: 14px; width: 100px;">Date</td>
+                <td style="padding: 6px 0; font-size: 14px; font-weight: 600;">${date}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Time</td>
+                <td style="padding: 6px 0; font-size: 14px; font-weight: 600;">${time}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Doctor</td>
+                <td style="padding: 6px 0; font-size: 14px; font-weight: 600;">${staffName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Original reason</td>
+                <td style="padding: 6px 0; font-size: 14px;">${reason}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="font-size: 14px; color: #374151;">
+            If you still need to see the doctor, please log in to the patient portal to book a new appointment.
+          </p>
+          <p style="font-size: 14px; color: #374151; margin-bottom: 0;">— The ${CLINIC_NAME} Team</p>
+        </div>
+      </div>
+    `,
+  };
+}
+
 function buildAppointmentConfirmationEmail(
   patientName: string,
   staffName: string,
@@ -533,6 +588,36 @@ export async function sendSlotCancelledEmail({
   });
 
   if (error) throw new Error(`Resend error (slot cancelled): ${error.message}`);
+  return data;
+}
+
+export async function sendAppointmentCancelledEmail({
+  toEmail,
+  patientName,
+  staffName,
+  appointmentDate,
+  reason,
+}: {
+  toEmail: string;
+  patientName: string;
+  staffName: string;
+  appointmentDate: Date;
+  reason: string;
+}) {
+  const { subject, html } = buildAppointmentCancelledEmail(
+    patientName,
+    staffName,
+    appointmentDate,
+    reason
+  );
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: resolveRecipient(toEmail),
+    subject,
+    html,
+  });
+
+  if (error) throw new Error(`Resend error (appointment cancelled): ${error.message}`);
   return data;
 }
 

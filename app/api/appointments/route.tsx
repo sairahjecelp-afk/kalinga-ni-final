@@ -232,6 +232,9 @@ export async function GET(request: NextRequest) {
     )
 
     const staff = await prisma.staff.findMany({
+      where: {
+        user: { status: 'ACTIVE' },
+      },
       include: {
         user: true,
         schedules: {
